@@ -33,13 +33,14 @@ PHP Playground is a complete, Docker-powered PHP development environment that ju
 ## ✨ Features
 
 ### Core Features
-- ✅ **PHP 8.2** with Apache
+- ✅ **PHP 8.2** with Apache (mod_php)
 - ✅ **Composer** - Dependency management
 - ✅ **mysqli + PDO** - Database drivers pre-installed
 - ✅ **Apache Rewrite** - WordPress permalinks ready
 - ✅ **Persistent MariaDB** - Data survives container restarts
 - ✅ **Folder-based projects** - Multiple projects in one environment
 - ✅ **Framework ready** - Works with Laravel, WordPress, Symfony, etc.
+- ✅ **Instant .htaccess reload** - Per-directory PHP config with hot reloading
 
 ### Development Tools
 - 🔥 **Xdebug 3.3** - Step debugging and profiling
@@ -169,9 +170,11 @@ docker compose build && docker compose up -d
 
 ### Per-Folder PHP Overrides
 
+**Important:** This environment uses **mod_php** (PHP as an Apache module). With mod_php, you **must use .htaccess** for per-directory PHP configuration. The `.user.ini` method only works with PHP-FPM/CGI/FastCGI setups.
+
 #### Understanding .htaccess
 
-`.htaccess` (Hypertext Access) is a Apache configuration file that allows you to override server settings on a per-directory basis without modifying the main Apache configuration.
+`.htaccess` (Hypertext Access) is an Apache configuration file that allows you to override server settings on a per-directory basis without modifying the main Apache configuration.
 
 **How .htaccess works:**
 
@@ -198,22 +201,24 @@ docker compose build && docker compose up -d
 
 Understanding when configuration changes apply without restarting:
 
-| Configuration Method | Hot Reload | Apply Time | Restart Required |
-|---------------------|------------|------------|------------------|
-| **php.ini** (global) | ❌ No | N/A | ✅ Yes (rebuild container) |
-| **.htaccess** (per-folder) | ✅ Yes | **Immediate** | ❌ No |
-| **.user.ini** (per-folder) | ✅ Yes | **Immediate*** | ❌ No |
+| Configuration Method | Hot Reload | Apply Time | Restart Required | Works in mod_php? |
+|---------------------|------------|------------|------------------|-------------------|
+| **php.ini** (global) | ❌ No | N/A | ✅ Yes (rebuild) | ✅ Yes |
+| **.htaccess** (per-folder) | ✅ Yes | **Immediate** | ❌ No | ✅ Yes |
+| **.user.ini** (per-folder) | ⚠️ N/A | N/A | N/A | ❌ **No** |
 
-\* This environment has `user_ini.cache_ttl = 0` configured, making .user.ini reload on every request (instant, just like .htaccess).
+**This environment uses mod_php** - only .htaccess works for per-directory configuration.
+
+**Why .user.ini doesn't work:**
+- .user.ini requires PHP-FPM, CGI, or FastCGI
+- mod_php (PHP as Apache module) cannot read .user.ini files
+- If you create a .user.ini file, it will be **silently ignored**
 
 **Development workflow:**
 - Use **php.ini** for settings that rarely change (global defaults)
 - Use **.htaccess** for project-specific settings (instant feedback + Apache config)
-- Use **.user.ini** if you prefer INI syntax (instant feedback in this environment)
 
-**For production:** Set `user_ini.cache_ttl = 300` (5 minutes) to reduce filesystem overhead.
-
-#### Option 1: Using .htaccess (Recommended)
+#### Using .htaccess (Only Option for mod_php)
 
 Create a `.htaccess` file in your project folder:
 
@@ -247,27 +252,11 @@ ErrorDocument 500 /project1/500.php
 - `php_value` - Set a string or number value (e.g., `memory_limit`, `upload_max_filesize`)
 - `php_flag` - Set a boolean value using `On` or `Off` (e.g., `display_errors`)
 
-#### Option 2: Using .user.ini
-
-Create a `.user.ini` file in your project folder:
-
-```ini
-# project1/.user.ini
-memory_limit = 512M
-upload_max_filesize = 100M
-post_max_size = 100M
-max_execution_time = 600
-display_errors = On
-```
-
-**Key differences:**
-- `.htaccess` changes apply **immediately** (read on every request)
-- `.user.ini` changes apply **immediately** in this environment (`user_ini.cache_ttl = 0`)
-- `.htaccess` can configure Apache settings (rewrites, redirects, security)
-- `.user.ini` only affects PHP settings
-- Both methods require **no container restart** (unlike global php.ini)
-
-**Note**: Standard PHP environments cache .user.ini for 5 minutes. This environment disables caching for development convenience.
+**Why use .htaccess:**
+- ✅ Changes apply **immediately** (read on every request)
+- ✅ Can configure both Apache and PHP settings
+- ✅ No container restart required
+- ✅ Works with mod_php (this environment)
 
 #### Practical Example: Different Settings Per Project
 
@@ -334,12 +323,22 @@ Access `http://localhost/project1/phpinfo.php` and search for your overridden va
 
 **Security tip**: Remove or protect phpinfo.php files in production as they expose server configuration.
 
+#### PHP Architecture Notes
+
+**This environment uses:**
+- **PHP 8.2** with **mod_php** (Apache module)
+- Per-directory config via **.htaccess only**
+- .user.ini files are **not supported** and will be ignored
+
+**To use .user.ini instead:**
+You would need to migrate to PHP-FPM (FastCGI Process Manager), which is a different architecture. See the [PHP-FPM vs mod_php comparison](#) for more details.
+
 #### Quick Tips
 
-**Force .user.ini reload without waiting:**
+**Verify your PHP SAPI:**
 ```bash
-# Restart just the PHP container (keeps database running)
-docker compose restart web
+docker compose exec web php -r "echo php_sapi_name();"
+# Should output: apache2handler (mod_php)
 ```
 
 **Verify which config file is being used:**
