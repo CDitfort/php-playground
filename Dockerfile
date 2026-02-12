@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
 RUN pecl install xdebug-3.3.1 \
     && docker-php-ext-enable xdebug
 
-# Enable Apache modules (rewrite for WordPress, SSL for HTTPS)
-RUN a2enmod rewrite ssl
+# Enable Apache modules (rewrite for WordPress, SSL for HTTPS, vhost_alias for dynamic subdomains)
+RUN a2enmod rewrite ssl vhost_alias
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
