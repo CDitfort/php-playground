@@ -201,13 +201,17 @@ Understanding when configuration changes apply without restarting:
 | Configuration Method | Hot Reload | Apply Time | Restart Required |
 |---------------------|------------|------------|------------------|
 | **php.ini** (global) | ❌ No | N/A | ✅ Yes (rebuild container) |
-| **.htaccess** (per-folder) | ✅ Yes | Immediate | ❌ No |
-| **.user.ini** (per-folder) | ✅ Yes | 5 minutes (cached) | ❌ No |
+| **.htaccess** (per-folder) | ✅ Yes | **Immediate** | ❌ No |
+| **.user.ini** (per-folder) | ✅ Yes | **Immediate*** | ❌ No |
+
+\* This environment has `user_ini.cache_ttl = 0` configured, making .user.ini reload on every request (instant, just like .htaccess).
 
 **Development workflow:**
 - Use **php.ini** for settings that rarely change (global defaults)
-- Use **.htaccess** for project-specific settings you're actively tweaking (instant feedback)
-- Use **.user.ini** if you prefer INI syntax and don't need instant changes
+- Use **.htaccess** for project-specific settings (instant feedback + Apache config)
+- Use **.user.ini** if you prefer INI syntax (instant feedback in this environment)
+
+**For production:** Set `user_ini.cache_ttl = 300` (5 minutes) to reduce filesystem overhead.
 
 #### Option 1: Using .htaccess (Recommended)
 
@@ -258,10 +262,12 @@ display_errors = On
 
 **Key differences:**
 - `.htaccess` changes apply **immediately** (read on every request)
-- `.user.ini` may take up to 5 minutes to take effect (cached by default)
+- `.user.ini` changes apply **immediately** in this environment (`user_ini.cache_ttl = 0`)
 - `.htaccess` can configure Apache settings (rewrites, redirects, security)
 - `.user.ini` only affects PHP settings
 - Both methods require **no container restart** (unlike global php.ini)
+
+**Note**: Standard PHP environments cache .user.ini for 5 minutes. This environment disables caching for development convenience.
 
 #### Practical Example: Different Settings Per Project
 
