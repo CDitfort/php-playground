@@ -167,23 +167,66 @@ docker compose build && docker compose up -d
 
 ### Per-Folder PHP Overrides
 
-You can override PHP settings for specific projects using `.htaccess` files:
+#### Understanding .htaccess
 
-**Option 1: Using .htaccess** (recommended)
+`.htaccess` (Hypertext Access) is a Apache configuration file that allows you to override server settings on a per-directory basis without modifying the main Apache configuration.
+
+**How .htaccess works:**
+
+1. **Processing Order**: Apache reads `.htaccess` files from the root down to the requested directory
+   ```
+   /var/www/html/.htaccess           (applied first)
+   /var/www/html/project1/.htaccess  (applied second, can override parent)
+   /var/www/html/project1/api/.htaccess  (applied last, can override both)
+   ```
+
+2. **Inheritance**: Child directories inherit settings from parent `.htaccess` files
+3. **Override**: Settings in child directories override parent settings for the same directive
+4. **Scope**: Changes only affect the directory containing the `.htaccess` and its subdirectories
+
+**Why use .htaccess for per-folder overrides?**
+- ✅ **Isolation**: Each project can have its own PHP settings
+- ✅ **No restart required**: Changes apply immediately
+- ✅ **Version control**: Settings can be committed with your project
+- ✅ **Portability**: Settings travel with your project code
+
+**Important**: This environment has `AllowOverride All` enabled in the Apache vhosts configuration, which allows `.htaccess` files to override all settings.
+
+#### Option 1: Using .htaccess (Recommended)
 
 Create a `.htaccess` file in your project folder:
 
 ```apache
 # project1/.htaccess
+
+# PHP Configuration Overrides
 php_value memory_limit 512M
 php_value upload_max_filesize 100M
 php_value post_max_size 100M
 php_value max_execution_time 600
 php_flag display_errors On
 php_flag log_errors On
+
+# URL Rewriting (for clean URLs)
+RewriteEngine On
+RewriteBase /project1/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
+
+# Security: Prevent directory listing
+Options -Indexes
+
+# Custom error pages
+ErrorDocument 404 /project1/404.php
+ErrorDocument 500 /project1/500.php
 ```
 
-**Option 2: Using .user.ini**
+**Syntax:**
+- `php_value` - Set a string or number value (e.g., `memory_limit`, `upload_max_filesize`)
+- `php_flag` - Set a boolean value using `On` or `Off` (e.g., `display_errors`)
+
+#### Option 2: Using .user.ini
 
 Create a `.user.ini` file in your project folder:
 
@@ -196,13 +239,76 @@ max_execution_time = 600
 display_errors = On
 ```
 
-**Note**: `.htaccess` changes apply immediately, while `.user.ini` may require a few seconds to take effect due to caching.
+**Key differences:**
+- `.htaccess` changes apply **immediately**
+- `.user.ini` may take a few seconds to take effect (cached for 5 minutes by default)
+- `.htaccess` can configure Apache settings (rewrites, redirects)
+- `.user.ini` only affects PHP settings
 
-**Common settings you might override per project:**
-- `memory_limit` - For memory-intensive applications
-- `upload_max_filesize` / `post_max_size` - For file upload applications
-- `max_execution_time` - For long-running scripts or batch processing
-- `error_reporting` / `display_errors` - Different error levels per environment
+#### Practical Example: Different Settings Per Project
+
+```
+PHP_Playground/
+├── project1/
+│   ├── .htaccess          # High memory, large uploads (file processing app)
+│   └── index.php
+├── project2/
+│   ├── .htaccess          # Low memory, fast execution (API)
+│   └── index.php
+└── test/
+    ├── .htaccess          # Debug mode enabled
+    └── index.php
+```
+
+**project1/.htaccess** (Heavy processing):
+```apache
+php_value memory_limit 1G
+php_value upload_max_filesize 500M
+php_value post_max_size 500M
+php_value max_execution_time 900
+```
+
+**project2/.htaccess** (Lightweight API):
+```apache
+php_value memory_limit 128M
+php_value max_execution_time 30
+php_flag display_errors Off
+```
+
+**test/.htaccess** (Development/Debug):
+```apache
+php_flag display_errors On
+php_flag display_startup_errors On
+php_value error_reporting E_ALL
+php_flag html_errors On
+```
+
+#### Common Settings You Might Override
+
+| Setting | Purpose | Example Values |
+|---------|---------|----------------|
+| `memory_limit` | Memory-intensive applications | `128M`, `256M`, `1G` |
+| `upload_max_filesize` | Maximum upload file size | `2M`, `64M`, `500M` |
+| `post_max_size` | Maximum POST data size | `8M`, `64M`, `500M` |
+| `max_execution_time` | Script timeout (seconds) | `30`, `300`, `900` |
+| `max_input_time` | Input parsing timeout | `60`, `300` |
+| `display_errors` | Show errors on screen | `On`, `Off` |
+| `error_reporting` | Error reporting level | `E_ALL`, `E_ALL & ~E_NOTICE` |
+| `date.timezone` | Default timezone | `America/New_York`, `UTC` |
+
+#### Testing Your .htaccess Configuration
+
+Create a test file to verify your settings:
+
+```php
+<?php
+// project1/phpinfo.php
+phpinfo();
+```
+
+Access `http://localhost/project1/phpinfo.php` and search for your overridden values to confirm they're applied.
+
+**Security tip**: Remove or protect phpinfo.php files in production as they expose server configuration.
 
 ## 🔒 HTTPS / SSL
 
