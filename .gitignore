@@ -1,0 +1,48 @@
+# Docker
+docker-compose.override.yml
+.env
+
+# Database data
+mysql-data/
+mariadb-data/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Project folders (keep structure, ignore content)
+# Comment out projects you want to commit
+test/*
+!test/.gitkeep
+project1/*
+!project1/.gitkeep
+project2/*
+!project2/.gitkeep
+
+# Composer
+vendor/
+composer.lock
+composer.phar
+
+# PHP
+.phpunit.result.cache
+
+# Temporary files
+*.tmp
+*.temp
+
+# Xdebug
+xdebug.log
+/tmp/
