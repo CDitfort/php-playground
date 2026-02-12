@@ -165,6 +165,8 @@ After changes, rebuild:
 docker compose build && docker compose up -d
 ```
 
+**Note**: Global php.ini changes require a container restart because PHP reads the configuration file only at startup.
+
 ### Per-Folder PHP Overrides
 
 #### Understanding .htaccess
@@ -186,11 +188,26 @@ docker compose build && docker compose up -d
 
 **Why use .htaccess for per-folder overrides?**
 - ✅ **Isolation**: Each project can have its own PHP settings
-- ✅ **No restart required**: Changes apply immediately
+- ✅ **Hot reloading**: Changes apply immediately (no restart required)
 - ✅ **Version control**: Settings can be committed with your project
 - ✅ **Portability**: Settings travel with your project code
 
 **Important**: This environment has `AllowOverride All` enabled in the Apache vhosts configuration, which allows `.htaccess` files to override all settings.
+
+#### Hot Reloading Behavior
+
+Understanding when configuration changes apply without restarting:
+
+| Configuration Method | Hot Reload | Apply Time | Restart Required |
+|---------------------|------------|------------|------------------|
+| **php.ini** (global) | ❌ No | N/A | ✅ Yes (rebuild container) |
+| **.htaccess** (per-folder) | ✅ Yes | Immediate | ❌ No |
+| **.user.ini** (per-folder) | ✅ Yes | 5 minutes (cached) | ❌ No |
+
+**Development workflow:**
+- Use **php.ini** for settings that rarely change (global defaults)
+- Use **.htaccess** for project-specific settings you're actively tweaking (instant feedback)
+- Use **.user.ini** if you prefer INI syntax and don't need instant changes
 
 #### Option 1: Using .htaccess (Recommended)
 
@@ -240,10 +257,11 @@ display_errors = On
 ```
 
 **Key differences:**
-- `.htaccess` changes apply **immediately**
-- `.user.ini` may take a few seconds to take effect (cached for 5 minutes by default)
-- `.htaccess` can configure Apache settings (rewrites, redirects)
+- `.htaccess` changes apply **immediately** (read on every request)
+- `.user.ini` may take up to 5 minutes to take effect (cached by default)
+- `.htaccess` can configure Apache settings (rewrites, redirects, security)
 - `.user.ini` only affects PHP settings
+- Both methods require **no container restart** (unlike global php.ini)
 
 #### Practical Example: Different Settings Per Project
 
@@ -309,6 +327,28 @@ phpinfo();
 Access `http://localhost/project1/phpinfo.php` and search for your overridden values to confirm they're applied.
 
 **Security tip**: Remove or protect phpinfo.php files in production as they expose server configuration.
+
+#### Quick Tips
+
+**Force .user.ini reload without waiting:**
+```bash
+# Restart just the PHP container (keeps database running)
+docker compose restart web
+```
+
+**Verify which config file is being used:**
+```php
+<?php
+// Shows which php.ini files are loaded
+echo php_ini_loaded_file() . "\n";
+echo php_ini_scanned_files();
+```
+
+**Debug .htaccess issues:**
+```bash
+# Check Apache error logs if .htaccess isn't working
+docker compose logs web
+```
 
 ## 🔒 HTTPS / SSL
 
