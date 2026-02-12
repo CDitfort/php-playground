@@ -44,7 +44,6 @@ PHP Playground is a complete, Docker-powered PHP development environment that ju
 ### Development Tools
 - 🔥 **Xdebug 3.3** - Step debugging and profiling
 - 🔥 **PHP.ini overrides** - Customizable PHP settings
-- 🔥 **Virtual hosts** - Access projects via `project.localhost`
 - 🔥 **HTTPS** - Self-signed SSL certificates
 - 🔥 **Mailhog** - Test email sending without sending real emails
 
@@ -105,22 +104,16 @@ PHP_Playground/
 
 ## 🎯 Working with Multiple Projects
 
-### Folder-Based Access
-All folders are mapped to the web server:
+All folders are mapped to the web server using standard folder-based URLs:
 - `http://localhost/project1/`
 - `http://localhost/project2/`
 - `http://localhost/test/`
 
-### Virtual Host Access (*.localhost)
-Use virtual hosts for cleaner URLs:
-1. Create a project folder: `myproject/`
-2. Access via: `http://myproject.localhost`
-3. HTTPS: `https://myproject.localhost`
+Simply create a new folder in the project root and access it via `http://localhost/foldername/`
 
-**Note**: Add entries to your hosts file if needed:
-```
-127.0.0.1 myproject.localhost
-```
+**HTTPS Support**: All projects are also accessible via HTTPS:
+- `https://localhost/project1/`
+- `https://localhost/test/`
 
 ## 🐛 Xdebug Configuration
 
