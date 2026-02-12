@@ -165,6 +165,45 @@ After changes, rebuild:
 docker compose build && docker compose up -d
 ```
 
+### Per-Folder PHP Overrides
+
+You can override PHP settings for specific projects using `.htaccess` files:
+
+**Option 1: Using .htaccess** (recommended)
+
+Create a `.htaccess` file in your project folder:
+
+```apache
+# project1/.htaccess
+php_value memory_limit 512M
+php_value upload_max_filesize 100M
+php_value post_max_size 100M
+php_value max_execution_time 600
+php_flag display_errors On
+php_flag log_errors On
+```
+
+**Option 2: Using .user.ini**
+
+Create a `.user.ini` file in your project folder:
+
+```ini
+# project1/.user.ini
+memory_limit = 512M
+upload_max_filesize = 100M
+post_max_size = 100M
+max_execution_time = 600
+display_errors = On
+```
+
+**Note**: `.htaccess` changes apply immediately, while `.user.ini` may require a few seconds to take effect due to caching.
+
+**Common settings you might override per project:**
+- `memory_limit` - For memory-intensive applications
+- `upload_max_filesize` / `post_max_size` - For file upload applications
+- `max_execution_time` - For long-running scripts or batch processing
+- `error_reporting` / `display_errors` - Different error levels per environment
+
 ## 🔒 HTTPS / SSL
 
 Self-signed certificates are automatically generated. To use HTTPS:
