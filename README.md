@@ -398,6 +398,52 @@ docker compose exec web composer update
 docker compose exec web composer install -d /var/www/html/myproject
 ```
 
+## Windows Terminal Shortcuts
+
+PHP and Composer run inside the Docker container, so their binaries cannot be added directly to the Windows PATH. To use commands like `php -v` or `composer install` from PowerShell, create small Windows wrapper scripts that forward commands into the `php_web` container.
+
+Create a user bin folder:
+
+```powershell
+mkdir "$env:USERPROFILE\bin" -Force
+```
+
+Create `%USERPROFILE%\bin\php.bat`:
+
+```bat
+@echo off
+docker exec -i -w /var/www/html php_web php %*
+```
+
+Create `%USERPROFILE%\bin\composer.bat`:
+
+```bat
+@echo off
+docker exec -i -w /var/www/html php_web composer %*
+```
+
+Add the wrapper folder to your user PATH:
+
+```powershell
+$bin = "$env:USERPROFILE\bin"
+$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ([string]::IsNullOrWhiteSpace($userPath)) {
+  [Environment]::SetEnvironmentVariable("Path", $bin, "User")
+} elseif (($userPath -split ";") -notcontains $bin) {
+  [Environment]::SetEnvironmentVariable("Path", "$userPath;$bin", "User")
+}
+```
+
+Open a new terminal, start the containers, and verify the shortcuts:
+
+```powershell
+docker compose up -d
+php -v
+composer -V
+```
+
+These shortcuts only work while the `php_web` container is running.
+
 ## 🛠️ Useful Commands
 
 ```bash
